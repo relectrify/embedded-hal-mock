@@ -123,11 +123,6 @@ impl Transaction {
         Transaction::new(TransactionKind::SetDuty(expected_duty))
     }
 
-    /// Create a new get stateful pin state transaction
-    pub fn get_state(state: State) -> Transaction {
-        Transaction::new(TransactionKind::GetState(state))
-    }
-
     /// Add an error return to a transaction
     ///
     /// This is used to mock failure behaviours.
@@ -290,13 +285,13 @@ impl StatefulOutputPin for Mock {
         let Transaction { kind, err } = s.next().expect("no expectation for pin::is_set_high call");
 
         assert!(
-            matches!(kind, TransactionKind::GetState(_)),
+            matches!(kind, TransactionKind::Get(_)),
             "expected pin::is_set_high"
         );
 
         if let Some(e) = err {
             Err(e)
-        } else if let TransactionKind::GetState(v) = kind {
+        } else if let TransactionKind::Get(v) = kind {
             Ok(v == State::High)
         } else {
             unreachable!();
@@ -310,13 +305,13 @@ impl StatefulOutputPin for Mock {
         let Transaction { kind, err } = s.next().expect("no expectation for pin::is_set_low call");
 
         assert!(
-            matches!(kind, TransactionKind::GetState(_)),
+            matches!(kind, TransactionKind::Get(_)),
             "expected pin::is_set_low"
         );
 
         if let Some(e) = err {
             Err(e)
-        } else if let TransactionKind::GetState(v) = kind {
+        } else if let TransactionKind::Get(v) = kind {
             Ok(v == State::Low)
         } else {
             unreachable!();
