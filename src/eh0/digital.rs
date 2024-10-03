@@ -47,7 +47,7 @@
 
 use eh0 as embedded_hal;
 use embedded_hal::{
-    digital::v2::{InputPin, OutputPin, ToggleableOutputPin},
+    digital::v2::{InputPin, OutputPin, StatefulOutputPin, ToggleableOutputPin},
     PwmPin,
 };
 
@@ -123,6 +123,11 @@ impl Transaction {
         Transaction::new(TransactionKind::SetDuty(expected_duty))
     }
 
+    /// Create a new get stateful pin state transaction
+    pub fn get_state(state: State) -> Transaction {
+        Transaction::new(TransactionKind::GetState(state))
+    }
+
     /// Add an error return to a transaction
     ///
     /// This is used to mock failure behaviours.
@@ -158,6 +163,8 @@ pub enum TransactionKind {
     GetMaxDuty(PwmDuty),
     /// Set the duty of a [`PwmPin`] using [`PwmPin::set_duty`], expecting the specified value
     SetDuty(PwmDuty),
+    /// Get the set state of the stateful pin
+    GetState(State),
 }
 
 impl TransactionKind {
@@ -271,6 +278,48 @@ impl ToggleableOutputPin for Mock {
         match err {
             Some(e) => Err(e),
             None => Ok(()),
+        }
+    }
+}
+
+impl StatefulOutputPin for Mock {
+    /// Is the output pin set high?
+    fn is_set_high(&self) -> Result<bool, Self::Error> {
+        let mut s = self.clone();
+
+        let Transaction { kind, err } = s.next().expect("no expectation for pin::is_set_high call");
+
+        assert!(
+            matches!(kind, TransactionKind::GetState(_)),
+            "expected pin::is_set_high"
+        );
+
+        if let Some(e) = err {
+            Err(e)
+        } else if let TransactionKind::GetState(v) = kind {
+            Ok(v == State::High)
+        } else {
+            unreachable!();
+        }
+    }
+
+    /// Is the output pin set low?
+    fn is_set_low(&self) -> Result<bool, Self::Error> {
+        let mut s = self.clone();
+
+        let Transaction { kind, err } = s.next().expect("no expectation for pin::is_set_low call");
+
+        assert!(
+            matches!(kind, TransactionKind::GetState(_)),
+            "expected pin::is_set_low"
+        );
+
+        if let Some(e) = err {
+            Err(e)
+        } else if let TransactionKind::GetState(v) = kind {
+            Ok(v == State::Low)
+        } else {
+            unreachable!();
         }
     }
 }
